@@ -14,6 +14,7 @@ output:
 ```{r load-packages, message = FALSE}
 library(ggplot2)
 library(dplyr)
+library(scales)
 ```
 
 ### Load data
@@ -26,100 +27,60 @@ load("brfss2013.RData")
 
 ## Part 1: Data
 
-BFRSS is an abbreviation for Behavioral Risk Factor Surveillance System. It is a large US telephone survey regarding health-related rish behaviours, chronic health conditions, and use of preventive services.The survey started in 1983, and has continued since then. The data in the dataset given in this assignment are mostly from 2013, but 5682 of the 491775 observations are from 2014. I have not found an explanation for that, but suspect that the reason is that the phone interviews followed the protocol from 2013, but were conducted in 2014. There's really no reason to pick the same date for both BRFSS's new year and the calendars new year.
+BFRSS is an abbreviation for Behavioral Risk Factor Surveillance System. It is a large US telephone survey regarding health-related risk behaviors, chronic health conditions, and use of preventive services. 
 
-This is observational data, it is not the result of an experiment.
+The data in the data set given in this assignment are mostly from 2013, but 5682 of the 491775 observations are from 2014. I have not found an explanation for that, but suspect that the reason is that the phone interviews followed the protocol from 2013, but were conducted in 2014. 
 
-Calls were made 7 days of week, daytime and evenings, all through the year, according to a standard BRFSS procedure for rotation of calls. Although the data is collected continously, there are no follow-up interviews of known respondents. Even if we analyze data from several years, we cannot compare the answers of one individual from one year to the next. 
+This is an observational study, it is not the result of an experiment. We typically cannot discover which variable is cause and which is effect, only that some variables are correlated with other variables. 
 
-The interviewers are usually professional telephone interviewers, and are given training specific to this survey before conducting interviews. They are using a computerized script while conducting the interview and record the answers on the computer in realtime. 
+The data is collected in single interviews, there are no follow-up interviews of known respondents, and because they are anonymous, there can't be. Even if we analyze data from several years, we cannot compare the answers of one individual from one year to the next. In other words, this is a cross-sectional study, not a longitudinal study.
 
-Various control methods are used to make sure that the interviewers aren't cheating or inventing data. Some methods used is: listening in on the interviewer, listening to both sides of the conversation, calling the respondent back to verify how the interviewer behaved, or simply analysing in bulk a particular interviewers data to see if frequencies vary significantly from the observations recorded by other interviewers.
+Since this is a health survey, some of the questions might be considered to be of a personal nature, and there is a risk that respondents brag, lie, or omit things. Because of anonymity, there can be no controls for this, but respondents are allowed to refuse individual questions, and this will be coded by the interviewer as "refused". Some controls are in place to make sure interviewer are not cheating or inventing answers.
 
-The respondents are not paid for their time or effort, but are told that the interview is important for society. Every respondent is anonymous. Due to anonymity, there can be no controls in place to check that the respondents aren't lying. Since this is a health survey, some of the questions might be considered of a personal nature, and there is a risk that respondents brag, lie, or omit things. Respondents are allowed to refuse individual questions, and this will be coded by the interviewer as "refused". 
+The survey is done in  US states and territories, including District of Columbia, Puerto Rico, Guam, US Virgin Islands.
 
+The sampling method is complex, each state or territory conducts their own sampling. This is known as *stratified sampling*. Most states also use stratified sampling within their borders. Random digit dialing is used in order to be able to call unlisted numbers. There are a number of technicalities with random digit dialing of land lines and cellphones, and I cannot really say I understand them all from the description, but from what I understand, this is also more or less a variant of stratified sampling. Also, different dates, weekdays, and time of day might influence the result, and a correction is made for this, also a variant of stratified sampling. 
 
-The survey is done in  US states and territories, including District of Columbia, Puerto Rico, Guam, US Virgin Islands, all of them hereafter known simply as "states". Each state organizes their own survey, and funding can have some influence of sample size and how the survey is organized. There is a core set of questions that every state must ask every year, some questions that vary from year to year, and some questions that each state can opt to add themselves. Dividing the survey into states (or other geographical areas, or groups of other kinds) is known as *stratified sampling*. 
+Only respondents answering from a private residence or college housing within their own state are considered for interview. This excludes people without phones, or people who live in institutions, or people who are homeless. Thus, the study is only representable to the *subset of US citizens who live in a private residence or college housing within their own state, with access to a phone, and who are willing to participate in surveys*. 
 
-To find respondents, a computer dials random digits, and a paid interviewer who interviews or tries to interview a person in the household corresponding to the dialed telephone number. In other words, within each state (or strata), one could in theory use simple random sampling, and a few states do. Most of the states use more advanced techniques to obtain a representative sample. In any case, since the observations are randomised, this is an example of *stratified random sampling*, albeit a complicated one.
+Since more than one person can live in a private residence or college housing, and each such dwelling can have more than one phone, this is corrected for, by giving weights to each data point. Similarly, weights are given to each stratum (geographic area, weekday, hour, date, digit series, etc), depending on population and sample size. Finally, a process known as *iterative proportional fitting*, or *raking* is used to compare every observation against known population data, and use this to raise or lower that observations weight. For this survey, the following categories are used: age, sex, categories of ethnicity, geographic regions within states, marital status, education level, home ownership and type of phone ownership. 
 
-Several states used stratified sampling for different geographical regions within state borders. Also, cell phone users and landline users are treated as different strata: Some strata defined in the survey overview are very technical: For landlines, the numbers divided into two strata known as  *high-density* or *medium-density* corresponding to how many househould numbers are allocated on each 100-block of numbers, and for cell phones a similar but more complex system is used for 1000-banks of cell phone numbers in a dedicated area code and exchange. 
-
-Not everyone that answers the phone is interviewed. In order to be eligible for the survey, the respondent must confirm that they answer from a phone with the same number the interviewer dialled, confirm that they are in a private residence or college housing, confirm that they live in this state, and confirm to be above 18. The survey is deliberately not trying to collect data from children, homeless, people in institutions, or people who are at work or somewhere else than in a private residence or college housing when called. If there are several adults in the house, a random person is selected. A person answering a cell phone will only be interviewed if the interviewee responds that they receive 90% or more of their calls on cellphones. 
-
-These restrictions might seem arbitrary, but they exist in order to produce a more representative sample then you would get if you simply interviewed anyone willing to talk. Since numbers are dialled randomly, persons who have more than one phone will also be overrepresented, and people sharing a single phone will be underrepresented. 
-
-*Design weights* are weights given to observations, that are known at design time of the study. This includes sample size in each state, number of phones, and number of adults in household. The formula is simple:
-
-$$
-\textrm{Design Weight} = \textrm{Stratum Weight}
-\cdot
-\frac{\textrm{Number of adults in household}}{\textrm{Number of phones}}
-$$
-where 
-$$
-\textrm{Stratum Weight} = \frac{\textrm{Population in stratum}}{\textrm{Sample size of stratum}\cdot\textrm{Total population}}
-$$
-In additition to geographic areas, a stratum in this survey also involves technicalities around random-digit dialling of landlines and cell phones. 
-
-This formula alone doesn't necessary give a representative sample. Typically you will get an overrepresentation of people near phones, with lots of time, and who like to talk. And an underrepresentation of people away from phones, who are busy, and dislike talking to strangers on the phone. You can't really control for this when doing a phone interview, 
-
-Controlling against people being a way from the phone, is obviously not possible. But something that *is* possible, is to compare every observation against known population data, and use this to raise or lower that observations weight. For this survey, the following categories are used: age, sex, categories of ethnicity, geographic regions within states, marital status, education level, home ownership and type of phone ownership. The observations are weighted by a computer program using a statistical method called *iterative proportional fitting*, or *raking*
-
-Luckily, one does not have to understand *raking* or the technicalities with random digit dialling in detail to make meaningful inferences from the data. The result of the analysis is included in the dataset as two variables> : **\_LLCPWT** and **\_CLLCPWT** corresponding to the respondents weight, and the respondents childs weight. Due to R variable naming rules, in our dataset, these variables are called **X_llcpwt2** and **X_llcpwt**. To make inferences from the data, each observations variables should be weighted by one of these weights (depending on whether the variable is about the adult itself or the child) 
-
-There's another reason why *raking* is done before publishing. Some of the demographic data collected are only used for calculating weights of observations, but since it could potentially help identify respondents, it is removed from the dataset before publishing. So even if we wanted to, we couldn't redo the *raking*. 
-
-A weakness with the given dataset is that when variables are missing, we don't know why: Did the respondent refuse to answer this particular question? Or was the respondent unable to answer this question? Or was there some other fault, maybe the interview abrubtly ended, or the interviewer forgot to ask a question or record the answer? 
-
-The codebook includes the frequency of "don't know", "refused", and "missing" for each question, but it is impossible to know for a particular missing variable in a particular observation what the reason for the missing variable is. In contrast to the included *R* dataset, the BRFSS dataset published in *stata* format includes the original coding. If the reason for missing values is of interest when analysing data, a possible solution would be to import that stata-formatted dataset into R instead of using the one supplied in R-format.
-
-More importantly, the survey is deliberately not universal to all americans. While it in some respects tries very hard to be so, by e.g. including every state and territory, interviewing huge amounts of people, and using advanced statistical techniques. In some respects it strangely enough tries very hard *not* to be universal, and deliberately excludes people in instutions (jail, military, etc), as well as homeless people and other people without phones. 
+I must admit I did not fully understand how to use all these weights, and even though it is technically wrong to do so, and doing it will result in a biased analysis, I have resorted to counting each observation as 1, and ignoring the weights given. After all, this is only an exploratory data analysis. 
 
 ## Part 2: Research questions
 
-**Research quesion 1:**
+**Research question 1:**
 
 Do former smokers exercise more than active smokers or non-smokers? 
 
 This question can potentially help understand if people primarily stop smoking for health-related reasons, or if other factors, such as social pressure is more important. If smokers quit for health-related reasons, we can also try to discover if the increased interest in personal health is short-lived or permanent. 
 
-**Research quesion 2:**
+**Research question 2:**
 
 Do people with high BMI have lower education level or income level? 
 
-Even if we find such a correlation, we still have multiple explanations: There could be a confounder, an external variable, that causes people to both lower their ambitions in school and the workplace, and also causes them to eat more. There could also be outright discrimination, that being overweight cases teachers to give you lower grades, and bosses to promote someone else. It is also possible that lack of success in school and work causes people to eat more. Asking this question won't help answer these questions, but before we start looking for an explanation, we must at least figure out if the effect even exists. 
+Even if we find such a correlation, we still have multiple explanations: an external variable could  cause people to eat more and lower their ambitions in school and the workplace. There could also be outright discrimination, that being overweight causes teachers to give you lower grades, and bosses to promote someone else. It is also possible that lack of success in school and work causes people to eat more. And, while it is not likely, it could also be that excess fat makes you dumber. But before we start looking for an explanation, we must at least figure out if the effect even exists. 
 
-bmi5cat
-educa
-employ1
 
-**Research quesion 3:**
+**Research question 3:**
 
-Are certain demographic groups weighted higher in the survey? Race group? Home Owners or Home Renters? Employment status?
+Does driving without a seat belt correlate with mental illness, or with age?
 
-This could possibly indicate that certain demographic groups are more likely to have several adults in the household. Or that there are other reasons that they are underrepresented in the survey. If we find obvious patterns like this, the next step would be to find out why, and possibly update the survey method to be more representative before raking. 
-
-raceg
-renthom1
-employ1
-X_llcpwt2
+It isn't more than a few decades ago that seat belts became mandatory in most US states. Using seat belts is easy, and it reduces unnecessary risk. It isn't totally far-fetched to assume that old people are used to driving without seat belts, or that not using seat belts could be correlated with mental illness. 
 
 * * *
 
 ## Part 3: Exploratory data analysis
 
-NOTE: Insert code chunks as needed by clicking on the "Insert a new code chunk" 
-button (green button with orange arrow) above. Make sure that your code is visible
-in the project you submit. Delete this note when before you submit your work.
+**Research question 1: Do former smokers exercise more than active smokers or non-smokers? **
 
-**Research question 1:**
+Exercise frequency is coded in the variables *exeroft1*, *exeroft2*, and *strength*. The numbers are coded in a strange way, to allow the respondent to give answers per week or per month. This is hard to work with, so I created a function to convert all answers to times per week. 
 
-The numbers in *exeroft1*, *exeroft2* and *strength* are coded in a strange way, to allow the respondent to give answers per week or per month. This is hard to work with, so I create a function to convert all answers to times per week. 
+The total exercise sessions per week is a sum of three variables, if any of these variables are *NA*, the result will also be *NA*. It is reasonable to assume that most people would like to brag. In other words, those who do some form or regular exercise regularly would most likely answer this question. Likewise people not exercising regularly would be the ones most likely to not answer. Therefore I substitute *NA* with zeroes. 
 
-The total excercise sessions per week is a sum of three variables, if any of these variables are *NA*, the result will also be *NA*. It is reasonable to assume that most people would like to brag. In other words, those who do some form or regular exercise regularly would answer this question. Likewise people not exercising regularly would be the ones most likely to not answer. Therefore I substitute *NA* with zeroes. 
-The full dataset also includes number of minutes per exercise session, and type of activity. Taking this into account would make the analysis more accurate, but much more difficult. It is therefore ignored. Instead, only the count of exercise sessions per week is used.
+The full data set also includes number of minutes per exercise session, and type of activity. Taking this into account would make the analysis more accurate, but much more difficult. It is therefore ignored. Instead, only the count of exercise sessions per week is used.
 
+Here is the function that converts the strange coding into exercise sessions per week:
 
 ```{r}
 exer_per_week = function(n) {
@@ -133,34 +94,34 @@ exer_per_week = function(n) {
 }
 ```
 
-The observations will be classified into three categories *current\_smoker*, *former\_smoker*, and *nonsmoker*'s. 
+When it comes to smoking, people will be classified into three categories *current\_smoker*, *former\_smoker*, and *nonsmoker*'s. 
 
-If someone claim to never have smoked more than 100 cigarettes in their life, or that they never have smoked regularly, they are a *nonsmoker*. If it's more than 6 months since last time a smoker smoked, they're a *former\_smoker*, otherwise, they're a *current\_smoker*. If they claim to never have smoked regularly, they are also classified as *nonsmoker*. This is saved in the *smoker* variable. 
+If someone claim to never have smoked more than 100 cigarettes in their life, or that they never have smoked regularly, they are a *nonsmoker*. If it's more than 6 months since last time a smoker smoked, they're a *former\_smoker*, otherwise, they're a *current\_smoker*. This is saved in the *smoker* variable. 
 
-Some people didn't answer the questions about smoking, these values are removed from the dataset. 
+Some people didn't answer the questions about smoking, these values are removed from the data set. 
 
-Number of times exercised per week is calculated using the function defined above, these values are saved in the *exerfreq* variable. 
+Number of times exercised per week is calculated using the function defined above, summed for the variables *exeroft1*, *exeroft2*, and *strength*. These values are saved in the *exerfreq* variable. 
 
 The relevant columns are extracted, and saved in the *rq1* variable
 
 ```{r}
 rq1 <-
   brfss2013 %>% 
-    mutate(
-      smoker = factor(
-        ifelse(smoke100=="Yes", 
-               ifelse(lastsmk2 == "Within the past month" |
-                        lastsmk2 == "Within the past 3 months" |
-                        lastsmk2 == "Within the past 6 months",
-                      "current_smoker",
-                      ifelse(lastsmk2 == "Never smoked regularly", 
-                             "nonsmoker",
-                             "former_smoker")),
-               "nonsmoker")),
-      exerfreq = exer_per_week(exeroft1) + 
-        exer_per_week(exeroft2) + 
-        exer_per_week(strength)
-    ) %>%
+  mutate(
+    smoker = factor(
+      ifelse(smoke100=="Yes", 
+             ifelse(lastsmk2 == "Within the past month" |
+                      lastsmk2 == "Within the past 3 months" |
+                      lastsmk2 == "Within the past 6 months",
+                    "current_smoker",
+                    ifelse(lastsmk2 == "Never smoked regularly", 
+                           "nonsmoker",
+                           "former_smoker")),
+             "nonsmoker")),
+    exerfreq = exer_per_week(exeroft1) + 
+      exer_per_week(exeroft2) + 
+      exer_per_week(strength)
+  ) %>%
   filter(!is.na(smoker)) %>%
   select(smoker, exerfreq)
 ```
@@ -170,55 +131,100 @@ Now let's take a quick look at the data
 ```{r}
 summary(rq1)
 ```
-A median of 4.46 exercise sessions per week seems inflated for what I would expect for the entire US adult population. Amateur athletes might work out 5 times per week, but most adults simply don't. 
+A median of 4.46 exercise sessions per week seems inflated for what I would expect for the entire US adult population. Amateur athletes might work out 4-7 times per week, but most adults simply don't. 
 
-A quick look at the *exract11* and *exract21* in the codebook shows that walking is by far the most common activity. While walking is certainly healthy, it can't really be compared to the more intensive activities. So given the current method a person walking their dog once around the block, three times a day, would most likely score higher on exercise than an amateur athlete running 5 miles every day. 
+Even more surprising, the max number of exercise sessions per week is 297. It is hard to imagine how that would fit into anyone's schedule! Even top athletes are usually exercising only 1-3 sessions per day, and a sane maximum should be $3\cdot7=21$ sessions per week.
 
-Even more surprising, the max number of exercise sessions per week is 297. It is hard to imagine how that would fit into anyones schedule. Even top athletes are usually exercising only 1-3 sessions per day, and a sane maximum should be $3\cdot7=21$ sessions per week.
-
-Let's investigate how many such outliers there are. 
+Let's investigate how many such outliers there are. To do this, I use the R **ecdf()** function, which dynamically creates a new function, the empirical cumulative density of the data in **rq1\$exerfreq**. Then I apply this dynamically created function to the value 21, which spits out the quantile of this datapoint. 
 
 ```{r}
-quantile(rq1$exerfreq, c(seq(.95, .99, .01), seq(.991, .999, .001)))
+(ecdf(rq1$exerfreq))(21)
 ```
 
-About 1% of the sample exercises more than 3 times per day. When someone exercises 3 times per day, I would personally guess they are top athletes, but top athletes are much rarer than one percent of the population. There's no reason to believe the people giving answers that high are more healthy than top athletes. It is therefore reasonable to ignore such values. 
+About 0.7% of the sample exercises more than 3 times per day. When someone exercises 3 times per day, I would personally guess they are top athletes, but top athletes are much rarer than 0.7 percent of the population. There's no reason to believe the people giving answers that high are more healthy than top athletes. It is therefore reasonable to ignore such values. 
 
-But now it's time for some plots. A histogram of exercise frequency for the three categories is plotted. As discussed above, to limit the view to the values of interest (without the outliers), x-asis of the plot is restricted to a maximum of 25 times per week (R will give a warning because not all values are visible). The y-axis will display *density* instead of *count*, otherwise the heights of the bars would only reflect the number of people in each category.
+Instead of removing the outliers, I decided to cap all values at 21:
 
 ```{r}
-ggplot(data=rq1, mapping=aes(x=exerfreq)) +
-  geom_histogram(mapping=aes(y= stat(density)), binwidth=1) +
-  facet_grid(~smoker) +
-  xlim(c(0, 25)) +
-  ylim(c(0, .1)) 
+rq1 <- rq1 %>%
+  mutate(exerfreq = ifelse(exerfreq > 21, 21, exerfreq))
 ```
 
-I would expect to see *some* pattern. But surprisingly, these three distributions are almost exactly similar.
+A histogram of exercise frequency for the three categories is plotted. The y-axis will display the proportion of people in each smoking category instead of the count of people, otherwise the heights of the bars would only reflect the number of people in each category.
 
-If one can conclude anyting from this exploratory data analysis, it's that smokers, former smokers and nonsmokers get just about the same amount of exercise.
+```{r}
+ggplot(data = rq1, 
+       mapping = aes(x = exerfreq)) +
+  geom_histogram(mapping = aes(y = stat(density)), 
+                 binwidth=1) +
+  facet_wrap(~smoker) +
+  scale_x_continuous("number of exercise sessions per week") + 
+  scale_y_continuous("proportion of people")
+```
 
-There are many possible improvements that can be done to this analysis, such as weighting types of activity, length of exercise time. Doing this properly could take months of work. 
+There seem to be a weak trend of increasing physical activity when going from current_smoker to former_smoker to nonsmoker. 
 
-One could also try investigating if there are differences for different genders, age groups, or other demographics. But there is also a danger associated with looking to hard for a pattern. At some point or another, when you divide and break your data enough, you will most likely, by pure chance, find something that looks like a pattern, even if it's there just by pure chance. 
+Apart from that, the most striking aspect of this, is how similar the three distributions are. However, there might be a reason for this: The peaks and valleys in the histograms, are most likely an artifact of dividing whole numbers by 4.35 when converting from times per month to times per week. The peak all to the right is from capping the values at 21. 
 
-For now, I conclude that when it comes to self-reported physical exercise (times per week), without discriminating between type of activity or exercise time, there seems to be no discernible difference between smokers, former smokers, and nonsmokers, among american adults
+We can try to reduce binning and see if that smooths the histogram:
 
-**Research quesion 2:**
+```{r}
+ggplot(data=rq1, 
+       mapping = aes(x = exerfreq)) +
+  geom_histogram(mapping = aes(y = stat(density)), 
+                 binwidth = 4) +
+  facet_wrap(~smoker) +
+  scale_x_continuous("number of exercise sessions per week") + 
+  scale_y_continuous("proportion of people")
+```
 
-The dataset contains variables for height and weight, so it would be possible to calculate BMI from those. But the dataset also contains values for BMI, and a variable *\_bmi5cat* categorizing into the common 4 category divisions of BMI: underweight, normal weight, overweight, and obese. For simplicity, this variable is used. 
+The proportion of people in each bin is now strictly decreasing after the first peak, as would be expected. 
+
+The distributions still look very much alike, with the same weak trend of increasing activity going from current_smoker to former_smoker to nonsmoker. 
+
+We can see if other statistics agree with my observation that nonsmokers seem slightly more active.
+
+```{r}
+rq1_summary <- rq1 %>%
+  group_by(smoker) %>%
+  summarise(median = median(exerfreq), 
+            mean = mean(exerfreq))
+
+rq1_summary
+```
+
+Both the mean and median of exercise frequency increases as one moves from current_smoker to former_smoker to nonsmoker. Particularly, the median increases by almost half an exercise session per week going from former_smoker to nonsmoker. 
+
+The effect is small, but since the plots, the mean, and the median agrees, most likely the effect is real, and I would be surprised if a statistical test doesn't confirm this.
+
+Our original hypothesis, that former smokers exercised more than nonsmokers because of a sudden interest in their own health, does not seem be supported by the data. 
+
+However, former smokers exercise more than current smokers. This could be because they are more insterested in health, but the causation could just as well go in the opposite direction, not smoking improves health, and exercise therefore becomes easier.
+
+Final note: A quick look at the *exract11* and *exract21* in the code book shows that walking is by far the most common activity. 
+
+While walking is certainly healthy, it can't really be compared to more intensive activities. So given the current method a person walking their dog once around the block, three times a day, would most likely score higher on exercise than an amateur athlete running 5 miles every day. 
+
+There are many possible improvements that can be done to this analysis, such as weighting types of activity and length of exercise time. Doing this properly could take (possibly) months of work. 
+
+**Research question 2: Do people with high BMI have lower education level or income level? **
+
+The data set contains variables for height and weight, meaning it would be possible to calculate BMI from those. But the data set also contains values for BMI, and a variable *\_BMI5cat* categorizing into the common 4 category divisions of BMI: underweight, normal weight, overweight, and obese. For simplicity, this variable is used. 
 
 For education level, there are two choices, the *educa* variable contains the choices exactly as in the survey. But I decided to use the *educag* which contains slightly fewer categories. 
 
 For income level, the survey only reports household income. There is no way of knowing if the income is from the person interviewed, or from their spouse or significant other.
 
-I extract the relevant variables into a dataset *rq2*.
+I extract the relevant variables into a data set *rq2*.
 
 ```{r}
 brfss2013 %>%
-  select(bmi_cat = X_bmi5cat, edu_level = X_educag, income_level = income2) ->
-rq2
-  
+  select(bmi_cat = X_bmi5cat, 
+         bmi = X_bmi5, 
+         edu_level = X_educag, 
+         income_level = income2) ->
+  rq2
+
 ```
 
 Let's inspect the data.
@@ -233,61 +239,218 @@ Let's drop all *NA*'s:
 
 ```{r}
 rq2 <- na.omit(rq2)
+
 summary(rq2)
 ```
 
-Let's plot the proportion of each education level for each bmi category.
+Then the proportion of each education level for each BMI category is plotted.
 
 ```{r}
-ggplot(data=rq2, mapping=aes(x=edu_level)) +
-  geom_bar(mapping=aes(y=..prop.., group=1)) +
+ggplot(data = rq2, 
+       mapping = aes(x = edu_level)) +
+  geom_bar(mapping = aes(y = ..prop.., 
+                         group=1)) +
   facet_grid(~bmi_cat) +
-  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+  theme(axis.text.x = element_text(angle = 60, 
+                                   hjust = 1)) +
+  scale_x_discrete("education level") + 
+  scale_y_continuous("proportion of people")
 ```
 
-People who are normal weight or overweighty seems to be the ones most likely to complete high school, and also the most likely to graduate from college or technical school. 
+People who are normal weight or people with overweight seems to be the ones most likely to complete high school, and also the most likely to graduate from college or technical school. 
 
 There is no big difference between people who are underweight and people who are obese, but it seems to be that those who are underweight are slightly more likely to graduate from college or technical school.
 
-Now we plot the proportion of people in each income level, for each bmi category.
+Now the proportion of people in each income level, for each BMI category is plotted.
 
 ```{r}
-ggplot(data=rq2, mapping=aes(x=income_level)) +
-  geom_bar(mapping=aes(y=..prop.., group=1)) +
+ggplot(data = rq2, mapping=aes(x = income_level)) +
+  geom_bar(mapping = aes(y = ..prop.., 
+                         group=1)) +
   facet_grid(~bmi_cat) + 
-  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+  theme(axis.text.x = element_text(angle = 60, 
+                                   hjust = 1)) + 
+  scale_x_discrete("income level") + 
+  scale_y_continuous("proportion of people")
 ```
 
 It seems to be the same trend here. People who are normal or overweight are most likely to have a household income in the top categories. 
 
 Underweight people seems much more likely than the other groups to have a low household income.
 
-Conclusion: The original question was if people with high BMI have lower education level or income level? The data does not seem to support that hypothesis. However, it seems reasonable to conclude that people with very high or very low BMI seems to have lower education lever or income level. 
+The original question was if people with high BMI have lower education level or income level? While that seems to be true, it is only half the picture. It seems more like people with *extreme* (very high or very low) BMI have lower education level and lower income level. 
 
-As people with low BMI are rarely discriminated against, If I were to make a guess for explaining this trend, I would suppose that health reasons, and not discrimination, is the reason why people drop out from education or from the workplace. Note that this is only a guess, and that it is impossible to conclude this based on just the exploratory data analysis done. 
-
-**Research quesion 3:**
-<!-- Are certain demographic groups weighted higher in the survey? Race group? Home Owners or Home Renters? Employment status? -->
-
-<!-- This could possibly indicate that certain demographic groups are more likely to have several adults in the household. Or that there are other reasons that they are underrepresented in the survey. If we find obvious patterns like this, the next step would be to find out why, and possibly update the survey method to be more representative before raking.  -->
-
-<!-- raceg -->
-<!-- renthom1 -->
-<!-- employ1 -->
-<!-- X_llcpwt -->
-
-To find race, there are several choices in the dataset, and it is not obvious which one is *right*. I chose the **\_imprace** variable, which for missing values has [imputed](https://en.wikipedia.org/wiki/Imputation_(statistics)) the most common race in the given area. This seems like a reasonable choice to avoid *NA*'s. 
+We can try to refine the exploratory data analysis further, by focusing on the extremes
 
 ```{r}
-brfss2013 %>%
-  select(race=X_imprace, renthom1, employ1, X_llcpwt) ->
-rq3
+rq2 %>%
+  group_by(edu_level) %>%
+  summarise(q01=quantile(bmi, probs=.01), 
+            q05=quantile(bmi, probs=.05), 
+            q50=quantile(bmi, probs=.50), 
+            q95=quantile(bmi, probs=.95), 
+            q99=quantile(bmi, probs=.99))
+
+```
+
+The above table shows the first, fifth, fiftieth (the median), ninety fifth and ninety ninth percentile of BMI in each education level. We see more extreme BMI's in the "Did not graduate high school" than in the other education levels, and the higher education levels have less extreme BMI's. 
+
+Also, the median decreases with increased education. I will argue that this is most likely only indicating a trend toward normal weight. The median decreases because overweight and obesity is much more common than underweight. Let's verify if underweight is rarer:
+
+```{r}
+rq2 %>%
+  group_by(bmi_cat) %>%
+  summarise(n = n())
+```
+
+We can confirm that overweight and obesity is much more common than underweight. Thus the decreasing median BMI with higher education, is probably indicating a trend toward normal weight.
+
+Let's see if extreme BMI also seems to reduce household income:
+
+```{r}
+rq2 %>%
+  group_by(income_level) %>%
+  summarise(q01 = quantile(bmi, probs = .01), 
+            q05 = quantile(bmi, probs = .05), 
+            q50 = quantile(bmi, probs = .50), 
+            q95 = quantile(bmi, probs = .95), 
+            q99 = quantile(bmi, probs = .99))
+
+```
+
+The results are pretty much the same as for education level. Whatever the reason, the higher your income, and the higher your education level is, the less common an extremely low or extremely high BMI becomes, and the lower the median BMI becomes. 
+
+In an exploratory data analysis, we can only find patterns, not causes, but doing exploratory data analysis can suggest probable causes, that we can investigate with an experiment or further studies. 
+
+As people with low BMI are rarely discriminated against, If I were to make a guess for explaining this trend, I would suppose that health reasons, is a major part of why people drop out from education or from the workplace. 
+
+But there can be other explanations: We notice that underweight is better correlated with low household income level than with low education level. In other words, the effect seems to be later in life. One possible explanation is that low income can cause malnutrition which again causes underweight. And these two effects could work together in a bad spiral. 
+
+Also, for obesity, we cannot eliminate causes, just because we have suggested a new mechanism. There could be a combination of health reasons, discrimination, and other factors causing lack or success in school or in the workplace. Also, failure to succeed in the school or workplace could cause depression, which again could cause compulsive eating. We just don't know. 
+
+**Research question 3: Does driving without a seat belt correlate with mental illness, or with age?**
+
+I start by extracting the relevant columns. 
+
+```{r}
+rq3 <- brfss2013 %>% 
+  select(X_age_g, seatbelt, menthlth)
+
 summary(rq3)
 ```
 
+There are far to many *NA*s for seat belt use, let's remove them from the analysis.
+
 ```{r}
-rq3 %>%
-  group_by(race) %>%
-  summarise(count=n(),, sum_weights=sum(X_llcpwt), avg_weight=sum(X_llcpwt))
+rq3 <- na.omit(rq3)
+
+summary(rq3)
 ```
 
+To start, let's plot seat belt use for different age categories. 
+
+```{r}
+ggplot(data=rq3, 
+       mapping = aes(x = seatbelt)) +
+  geom_bar(mapping = aes(y = ..prop.., 
+                         group=1)) +
+  facet_wrap(~X_age_g) + 
+  theme(axis.text.x = element_text(angle = 60, 
+                                   hjust = 1)) +
+  scale_x_discrete("seat belt use") + 
+  scale_y_continuous("proportion of people")
+```
+
+Most people, regardless of age group, seem to use seat belts. 
+
+From the plots, it seems seat belt use increases with age. But it is hard to see because of the scale. Let's find out the proportion of each age group that always use seat belts 
+
+```{r}
+rq3 <- rq3 %>% 
+  mutate(seatbelt_always=(seatbelt == "Always"))
+
+rq3always_age <- rq3 %>%
+  group_by(X_age_g) %>%
+  summarise(total_in_age_group = n(), 
+            seatbelt_always = sum(seatbelt_always)) %>%
+  mutate(proportion = seatbelt_always / total_in_age_group)
+
+rq3always_age
+```
+
+The difference isn't huge, but age definitely seems to be correlated with seat belt use, and young people use seat belts less. 
+
+Although one cannot in general find causes and effects when doing an observation study, few people would argue that not using a seat belt causes them to be young, or that using the seat belt makes you old. (Sure, some more die in accidents when not using seat belt, but it isn't a major factor influencing age distribution in the US population). 
+
+So a possible and likely explanation would be that recklessness or lack of risk-aversion of younger people causes them to not use a seat belt. 
+
+In particular, it does *not* seem likely that lack of seat belt use is primarily from people old enough to have lived before the seat belt legislation, and any future efforts to increase seat belt use is probably better directed at young people, than at old people.
+
+Since we found out that youth (and possibly recklessness) is correlated with lack of seat belt use, let's see if this is also correlated with mental illness. 
+
+To simplify the analysis, I will narrow the **menthlth** variable into a single boolean variable **mental_problems**: with values FALSE (0 days not good last 30 days), and TRUE (1+ days not good last 30 days). 
+
+```{r}
+rq3 <- rq3 %>% 
+  mutate(mental_problems = (menthlth > 0))
+```
+
+To start, let's plot seat belt use for people with and without mental problems last 30 days: 
+
+```{r}
+ggplot(data = rq3, 
+       mapping = aes(x = seatbelt)) +
+  geom_bar(mapping = aes(y = ..prop.., 
+                         group=1)) +
+  facet_wrap(mental_problems ~., 
+             labeller = as_labeller(c(
+               `FALSE` = "No bad days (last 30 days)",
+               `TRUE` = "1 or more bad days (last 30 days)"
+             ))) + 
+  theme(axis.text.x = element_text(angle = 60, 
+                                   hjust = 1)) +
+  scale_x_discrete("seat belt use") + 
+  scale_y_continuous("proportion of people")
+```
+
+There seems to slightly lower seat belt use for people with mental problems. Let's find out the proportion of people with and without mental problems (in the last 30 days) that always use seat belts 
+
+```{r}
+rq3always_mental <- rq3 %>% 
+  group_by(mental_problems) %>%
+  summarise(total_in_group = n(), 
+            seatbelt_always = sum(seatbelt_always)) %>%
+  mutate(proportion = seatbelt_always / total_in_group)
+
+rq3always_mental
+```
+
+No big difference here. Mental illness seems to be weekly correlated with seat belt us. But the effect is
+very small.
+
+So far, we have only looked at mental illness as a binary variable. Would the results be different if we considered people having more than one bad day the last 30 days? (Note: to make the differences easier to spot, and since all the proportions are above 0.7, the y axis does not start at 0 in the plot below)
+
+```{r}
+rq3_always_mental_2 <- rq3 %>%
+  group_by(menthlth) %>%
+  summarise(total_in_group = n(), 
+            seatbelt_always = sum(seatbelt_always)) %>%
+  mutate(proportion = seatbelt_always / total_in_group)
+
+ggplot(data = rq3_always_mental_2, 
+       mapping = aes(x = menthlth, 
+                     y=proportion)) +
+  geom_bar(stat="identity") +
+  scale_x_continuous("number of days with mental health not good (last 30 days)") +
+  scale_y_continuous("proportion of people always using seat belt",
+                     limits=c(.7,.925), 
+                     oob=rescale_none)
+```
+
+It seems to be a downward trend, more days where the mental health is "not good" continue to lead to lower seat belt use. The trend seems to continue until we reach about 10 not good days. Then the trends seems to flatten, and random variation seems to dominate. 
+
+Much of this variation can be explained by looking at number of answers for each day-scount in the code book for the *menthlth* variable. If the day-counts were measurements, the number of answers for each day-count would most likely have started with a peak at 0, then decreased almost to 0, with a new peak at exactly 30 days (where every day is "not good"). But the numbers people were actually giving in the interview is dominated by round numbers which  "feel" right. The day-counts with "many" answers are: 0, 1, 2, 3, 5, 10, 15, and 30 (the "medium high" day-counts are: 4, 7, 14, 20, and 25). We can see in the plot above that the bars for 10, 15, 20, and 30 are almost on a straight line. 
+
+The remaining day-counts very not chosen by many of the respondents, thus the sample size for these day-counts is smaller. As the sample size becomes increasingly smaller, trends are harder to spot, and the data is more dominated by random variation (or maybe other psychological effects)
+
+Even though I think there is a real trend here, and mental problems really correlate with lower seat belt use, the size of this effect is so small as to be almost negligible in practice. 
